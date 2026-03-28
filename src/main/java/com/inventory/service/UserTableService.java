@@ -1,5 +1,6 @@
 package com.inventory.service;
 
+import com.inventory.domain.ColumnDefinition;
 import com.inventory.domain.UserTable;
 import com.inventory.repository.ColumnDefinitionRepository;
 import com.inventory.repository.UserTableRepository;
@@ -33,12 +34,19 @@ public class UserTableService {
 
     /**
      * 새 테이블 생성
-     * 이름을 받아 UserTable 객체를 생성하고 DB에 저장한 뒤 반환한다
+     * 테이블 저장 후 ID 시스템 컬럼을 자동으로 삽입한다
+     * ID 컬럼은 isSystem=true, colOrder=0으로 생성되어 삭제/수정이 불가하다
      */
     @Transactional
     public UserTable create(String name) {
-        UserTable table = new UserTable(name);
-        return userTableRepository.save(table);
+        UserTable table = userTableRepository.save(new UserTable(name));
+
+        // ID 시스템 컬럼 자동 삽입 (colOrder=0, isSystem=true)
+        columnDefinitionRepository.save(
+                new ColumnDefinition(table, "ID", ColumnDefinition.DataType.NUMBER, 0, true)
+        );
+
+        return table;
     }
 
     /**

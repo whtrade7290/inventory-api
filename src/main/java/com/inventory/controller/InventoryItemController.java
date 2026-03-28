@@ -33,11 +33,12 @@ public class InventoryItemController {
     /**
      * 아이템 추가 (POST /api/tables/{tableId}/items)
      * 요청 바디의 columnId → value 맵을 기반으로 아이템과 셀 값을 함께 생성한다
+     * stockQuantity는 실제 재고 기준값으로 inventory_item.stock_quantity에 저장된다
      */
     @PostMapping
     public ResponseEntity<ItemResult> create(@PathVariable Long tableId,
                                               @RequestBody ItemRequest request) {
-        return ResponseEntity.ok(inventoryItemService.create(tableId, request.values()));
+        return ResponseEntity.ok(inventoryItemService.create(tableId, request.values(), request.stockQuantity()));
     }
 
     /**
@@ -53,6 +54,7 @@ public class InventoryItemController {
     /**
      * 아이템 생성 요청 바디
      * values: 컬럼 ID → 저장할 값 (RELATION 타입이면 참조할 아이템 ID를 문자열로 전달)
+     * stockQuantity: 초기 재고 수량 (미전송 시 0으로 처리)
      */
-    public record ItemRequest(Map<Long, String> values) {}
+    public record ItemRequest(Map<Long, String> values, int stockQuantity) {}
 }

@@ -73,9 +73,10 @@ public class InventoryItemService {
     /**
      * 새 아이템 생성
      * 요청에서 받은 columnId → value 맵을 기반으로 ItemValue를 생성해 함께 저장한다
+     * stockQuantity는 inventory_item.stock_quantity에 저장되며 실제 재고 기준값이다
      */
     @Transactional
-    public ItemResult create(Long tableId, Map<Long, String> columnValues) {
+    public ItemResult create(Long tableId, Map<Long, String> columnValues, int stockQuantity) {
         UserTable userTable = userTableRepository.findById(tableId)
                 .orElseThrow(() -> new IllegalArgumentException("테이블을 찾을 수 없습니다. id=" + tableId));
 
@@ -84,8 +85,8 @@ public class InventoryItemService {
         Map<Long, ColumnDefinition> columnMap = columns.stream()
                 .collect(Collectors.toMap(ColumnDefinition::getId, c -> c));
 
-        // 아이템 생성
-        InventoryItem item = inventoryItemRepository.save(new InventoryItem(userTable));
+        // 아이템 생성 — 초기 재고 수량 포함
+        InventoryItem item = inventoryItemRepository.save(new InventoryItem(userTable, stockQuantity));
 
         // 요청된 컬럼별 값을 ItemValue로 생성
         List<ItemValue> values = new ArrayList<>();
@@ -152,8 +153,8 @@ public class InventoryItemService {
                 })
                 .toList();
 
-        return new ItemResult(item.getId(), item.getCreatedAt().toString(),
-                item.getUpdatedAt().toString(), cells);
+        return new ItemResult(item.getId(), item.getStockQuantity(),
+                item.getCreatedAt().toString(), item.getUpdatedAt().toString(), cells);
     }
 
     /**
@@ -165,8 +166,8 @@ public class InventoryItemService {
         }
     }
 
-    /** 아이템 조회 결과 DTO */
-    public record ItemResult(Long id, String createdAt, String updatedAt, List<CellResult> values) {}
+    /** 아이템 조회 결과 DTO — stockQuantity는 실제 재고 기준값 */
+    public record ItemResult(Long id, int stockQuantity, String createdAt, String updatedAt, List<CellResult> values) {}
 
     /** 셀 값 결과 DTO */
     public record CellResult(

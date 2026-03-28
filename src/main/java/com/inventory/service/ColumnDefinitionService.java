@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 컬럼 정의에 대한 비즈니스 로직을 처리하는 서비스
@@ -62,17 +63,48 @@ public class ColumnDefinitionService {
     }
 
     /**
+     * 컬럼 이름 변경
+     * 시스템 컬럼(isSystem=true)은 수정이 거부된다
+     */
+    @Transactional
+    public ColumnDefinition rename(Long tableId, Long columnId, String name) {
+        ColumnDefinition column = findInTable(tableId, columnId);
+        if (column.isSystem()) {
+            throw new IllegalStateException("시스템 컬럼은 수정할 수 없습니다.");
+        }
+        column.rename(name);
+        return column;
+    }
+
+    /**
+     * 컬럼 순서 일괄 변경
+     * 요청 맵의 키는 columnId, 값은 새 colOrder이다
+     * 시스템 컬럼(colOrder=0)은 순서 변경에서 제외된다
+     */
+    @Transactional
+    public List<ColumnDefinition> reorder(Long tableId, Map<Long, Integer> orderMap) {
+        validateTableExists(tableId);
+        List<ColumnDefinition> columns = columnDefinitionRepository.findByUserTableIdOrderByColOrder(tableId);
+        for (ColumnDefinition col : columns) {
+            Integer newOrder = orderMap.get(col.getId());
+            if (newOrder != null && !col.isSystem()) {
+                col.updateOrder(newOrder);
+            }
+        }
+        return columns;
+    }
+
+    /**
      * 컬럼 삭제
-     * 다른 컬럼에서 ref_column_id로 참조 중인 경우 삭제가 거부된다
+     * 시스템 컬럼(isSystem=true)과 다른 컬럼에서 참조 중인 컬럼은 삭제가 거부된다
      */
     @Transactional
     public void delete(Long tableId, Long columnId) {
-        ColumnDefinition column = columnDefinitionRepository.findById(columnId)
-                .orElseThrow(() -> new IllegalArgumentException("컬럼을 찾을 수 없습니다. id=" + columnId));
+        ColumnDefinition column = findInTable(tableId, columnId);
 
-        // 요청한 테이블에 속한 컬럼인지 확인
-        if (!column.getUserTable().getId().equals(tableId)) {
-            throw new IllegalArgumentException("해당 테이블에 속한 컬럼이 아닙니다.");
+        // 시스템 컬럼 삭제 거부
+        if (column.isSystem()) {
+            throw new IllegalStateException("시스템 컬럼은 삭제할 수 없습니다.");
         }
 
         // 다른 RELATION 컬럼에서 이 컬럼을 참조 중이면 삭제 거부
@@ -81,6 +113,18 @@ public class ColumnDefinitionService {
         }
 
         columnDefinitionRepository.delete(column);
+    }
+
+    /**
+     * 특정 테이블의 컬럼을 조회하고, 테이블 소속 여부를 검증한다
+     */
+    private ColumnDefinition findInTable(Long tableId, Long columnId) {
+        ColumnDefinition column = columnDefinitionRepository.findById(columnId)
+                .orElseThrow(() -> new IllegalArgumentException("컬럼을 찾을 수 없습니다. id=" + columnId));
+        if (!column.getUserTable().getId().equals(tableId)) {
+            throw new IllegalArgumentException("해당 테이블에 속한 컬럼이 아닙니다.");
+        }
+        return column;
     }
 
     /**

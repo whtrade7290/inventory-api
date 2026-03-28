@@ -47,6 +47,13 @@ public class ColumnDefinition {
     @Column(name = "ref_column_id")
     private Long refColumnId;
 
+    /**
+     * 시스템 컬럼 여부 — true이면 삭제/수정 불가
+     * 테이블 생성 시 자동 삽입되는 ID 컬럼이 해당된다
+     */
+    @Column(name = "is_system", nullable = false)
+    private boolean isSystem = false;
+
     /** 생성 시각 (최초 저장 시 자동 설정) */
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -63,6 +70,18 @@ public class ColumnDefinition {
     }
 
     /**
+     * 시스템 컬럼 생성자 — 테이블 생성 시 자동 삽입되는 ID 컬럼에 사용
+     * isSystem=true로 설정되어 삭제/수정이 거부된다
+     */
+    public ColumnDefinition(UserTable userTable, String name, DataType dataType, Integer colOrder, boolean isSystem) {
+        this.userTable = userTable;
+        this.name = name;
+        this.dataType = dataType;
+        this.colOrder = colOrder;
+        this.isSystem = isSystem;
+    }
+
+    /**
      * RELATION 타입 컬럼 생성자
      * 참조할 테이블 ID와 조인 키가 되는 컬럼 ID를 함께 설정한다
      */
@@ -73,6 +92,22 @@ public class ColumnDefinition {
         this.colOrder = colOrder;
         this.refTableId = refTableId;
         this.refColumnId = refColumnId;
+    }
+
+    /**
+     * 컬럼 이름 변경 — 시스템 컬럼 여부 확인은 서비스 레이어에서 수행
+     * @param name 새 이름
+     */
+    public void rename(String name) {
+        this.name = name;
+    }
+
+    /**
+     * 컬럼 순서 변경 — 서비스에서 일괄 처리 시 사용
+     * @param colOrder 새 순서
+     */
+    public void updateOrder(int colOrder) {
+        this.colOrder = colOrder;
     }
 
     /**

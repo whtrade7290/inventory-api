@@ -36,16 +36,57 @@ public class InventoryItem {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /**
+     * 실제 재고 수량 — 이 프로그램의 핵심 재고 기준 값
+     * 입고 시 증가, BOM 등록(출고) 시 차감된다
+     * item_value의 수량 컬럼은 참고용이며, 이 값이 실제 재고의 기준이다
+     */
+    @Column(name = "stock_quantity", nullable = false)
+    private int stockQuantity = 0;
+
     /** 이 아이템의 컬럼별 실제 값 목록 */
     @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemValue> values = new ArrayList<>();
 
     /**
-     * 어느 테이블에 속할지를 지정해 아이템 생성
+     * 어느 테이블에 속할지를 지정해 아이템 생성 (재고 수량 0으로 초기화)
      * 실제 셀 값은 ItemValue로 별도 저장된다
      */
     public InventoryItem(UserTable userTable) {
         this.userTable = userTable;
+    }
+
+    /**
+     * 테이블과 초기 재고 수량을 지정해 아이템 생성
+     * @param userTable 속할 테이블
+     * @param stockQuantity 초기 재고 수량
+     */
+    public InventoryItem(UserTable userTable, int stockQuantity) {
+        this.userTable = userTable;
+        this.stockQuantity = stockQuantity;
+    }
+
+    /**
+     * 재고 차감 — BOM 등록 시 호출
+     * 현재 재고보다 많은 수량을 차감 요청하면 예외를 던진다 (트랜잭션 롤백 유도)
+     * @param quantity 차감할 수량
+     */
+    public void deductStock(int quantity) {
+        if (this.stockQuantity < quantity) {
+            throw new IllegalStateException(
+                    "재고 부족: itemId=" + this.id
+                    + ", 현재 재고=" + this.stockQuantity
+                    + ", 요청 수량=" + quantity);
+        }
+        this.stockQuantity -= quantity;
+    }
+
+    /**
+     * 재고 증가 — 입고 등록 시 호출
+     * @param quantity 증가할 수량
+     */
+    public void addStock(int quantity) {
+        this.stockQuantity += quantity;
     }
 
     /**

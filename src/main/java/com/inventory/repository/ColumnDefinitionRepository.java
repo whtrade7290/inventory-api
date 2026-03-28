@@ -18,4 +18,7 @@ public interface ColumnDefinitionRepository extends JpaRepository<ColumnDefiniti
 
     /** 특정 테이블에서 가장 큰 colOrder 값 조회 (새 컬럼 추가 시 순서 자동 계산에 사용) */
     int countByUserTableId(Long tableId);
+
+    /** 여러 테이블의 컬럼 목록을 한 번에 조회 (프로젝트 상세 조회 시 N+1 방지) */
+    List<ColumnDefinition> findByUserTableIdIn(List<Long> tableIds);
 }

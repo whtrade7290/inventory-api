@@ -27,6 +27,22 @@ public class UserTable {
     @Column(nullable = false)
     private String name;
 
+    /**
+     * 테이블 역할 — 사이드바 그룹핑 및 재고 집계에 사용
+     * PARTS: 부품 테이블 (재고 현황 대상), CONTRACTOR: 시공사, PROJECT: 프로젝트, GENERAL: 일반
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.GENERAL;
+
+    /** 테이블 역할 열거형 */
+    public enum Role {
+        PARTS,       // 부품 테이블 — 재고 현황 집계 대상
+        CONTRACTOR,  // 시공사 테이블
+        PROJECT,     // 프로젝트 테이블
+        GENERAL      // 일반 (기본값)
+    }
+
     /** 생성 시각 (최초 저장 시 자동 설정, 이후 변경 불가) */
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -44,11 +60,20 @@ public class UserTable {
     private List<InventoryItem> items = new ArrayList<>();
 
     /**
-     * 테이블 이름으로 생성
-     * name 필드만 받아 객체를 초기화한다. createdAt/updatedAt은 @PrePersist에서 설정된다
+     * 테이블 이름으로 생성 (role 기본값: GENERAL)
+     * createdAt/updatedAt은 @PrePersist에서 자동 설정된다
      */
     public UserTable(String name) {
         this.name = name;
+    }
+
+    /**
+     * 테이블 이름과 역할을 지정해 생성
+     * role을 통해 사이드바 그룹핑과 재고 집계 대상 여부가 결정된다
+     */
+    public UserTable(String name, Role role) {
+        this.name = name;
+        this.role = role;
     }
 
     /**
